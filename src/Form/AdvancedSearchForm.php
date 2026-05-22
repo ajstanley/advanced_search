@@ -71,9 +71,9 @@ class AdvancedSearchForm extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('request_stack')->getMainRequest(),
-      $container->get('current_route_match')
-    );
+          $container->get('request_stack')->getMainRequest(),
+          $container->get('current_route_match')
+      );
   }
 
   /**
@@ -124,6 +124,16 @@ class AdvancedSearchForm extends FormBase {
   }
 
   /**
+   * Get if Collection Recursive Search checkbox is enabled or disabled.
+   *
+   * @return bool
+   *   the enable or disable for Edismax Search checkbox
+   */
+  public static function getRecursive() {
+    return self::getConfig(SettingsForm::RECURSIVE_FLAG, 0);
+  }
+
+  /**
    * Get the character to use for removing a facet from the query.
    *
    * @return string
@@ -147,6 +157,7 @@ class AdvancedSearchForm extends FormBase {
     $options = [];
     foreach ($fields as $field) {
       $id = $field->getFieldIdentifier();
+      // phpcs:ignore
       $options[$id] = $this->t($field->getLabel());
     }
     return $options;
@@ -173,7 +184,7 @@ class AdvancedSearchForm extends FormBase {
   protected function defaultTermValues(array $options) {
     return [
       self::CONJUNCTION_FORM_FIELD => self::AND_OP,
-      // First item in list is default.
+          // First item in list is default.
       self::SEARCH_FORM_FIELD => key($options),
       self::INCLUDE_FORM_FIELD => self::IS_OP,
       self::VALUE_FORM_FIELD => NULL,
@@ -185,7 +196,8 @@ class AdvancedSearchForm extends FormBase {
    */
   protected function processInput(FormStateInterface $form_state, array $term_default_values) {
     $input = $form_state->getUserInput();
-    $recursive = $input['recursive'] ?? NULL;
+    $input['recursive'] = $input['recursive'] ?? self::getRecursive();
+
     $term_values = isset($input['terms']) && is_array($input['terms']) ? $input['terms'] : [];
     // Form was not submitted see if we can rebuild from query parameters.
     $advanced_search_query = new AdvancedSearchQuery();
@@ -203,8 +215,8 @@ class AdvancedSearchForm extends FormBase {
     if ($trigger != NULL) {
       $term_index = $trigger['#term_index'] ?? 0;
       $value = $trigger['#value'] instanceof TranslatableMarkup ?
-        $trigger['#value']->getUntranslatedString() :
-        $trigger['#value'];
+                $trigger['#value']->getUntranslatedString() :
+                $trigger['#value'];
       switch ($value) {
         case $this->getAddOperator():
           // Insert after the term listed.
@@ -227,7 +239,7 @@ class AdvancedSearchForm extends FormBase {
       $input['recursive'] = $recursive;
       $form_state->setUserInput($input);
     }
-    return [$recursive, $term_values];
+    return [$input['recursive'] , $term_values];
   }
 
   /**
@@ -251,7 +263,7 @@ class AdvancedSearchForm extends FormBase {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, FormStateInterface $form_state, View $view = NULL, array $display = [], array $fields = [], string $context_filter = NULL) {
+  public function buildForm(array $form, FormStateInterface $form_state, ?View $view = NULL, array $display = [], array $fields = [], ?string $context_filter = NULL) {
     // Keep reference to view and display as the submit handler may use them
     // to redirect the user to the search page.
     $form_state->set('view', $view);
@@ -273,6 +285,7 @@ class AdvancedSearchForm extends FormBase {
       ],
     ];
 
+    // phpcs:ignore
     $options = (self::getEdismaxSearch() && self::getSearchAllFields()) ? ["all" => $this->t("@label", ["@label" => $this->t(self::getEdismaxSearchLabel())])] + $this->fieldOptions($fields) : $this->fieldOptions($fields);
     $term_default_values = $this->defaultTermValues($options);
     [$recursive, $term_values] = $this->processInput($form_state, $term_default_values);
@@ -286,7 +299,7 @@ class AdvancedSearchForm extends FormBase {
       $term_value = !empty($term_values) ? array_shift($term_values) : $term_default_values;
       $conjunction = $term_value[self::CONJUNCTION_FORM_FIELD] ?? $term_default_values[self::CONJUNCTION_FORM_FIELD];
       $term_elements[] = [
-        // Only show on terms after the first.
+            // Only show on terms after the first.
         self::CONJUNCTION_FORM_FIELD => $first ? NULL : [
           '#type' => 'select',
           '#attributes' => [
@@ -318,8 +331,8 @@ class AdvancedSearchForm extends FormBase {
             self::NOT_OP => $this->t('is not'),
           ],
           '#default_value' => $term_value[self::INCLUDE_FORM_FIELD],
-          // Show only when conjunction is 'AND' as 'OR NOT' is not supported
-          // by solr and will be converted to 'AND NOT'.
+          // Show only when conjunction is 'AND' as 'OR NOT' is not
+          // supported by solr and will be converted to 'AND NOT'.
           '#states' => [
             'visible' => [
               ':input[name="terms[' . $i . '][' . self::CONJUNCTION_FORM_FIELD . ']"]' => ['value' => self::AND_OP],
@@ -337,9 +350,9 @@ class AdvancedSearchForm extends FormBase {
               ':input[name="terms[' . $i . '][' . self::CONJUNCTION_FORM_FIELD . ']"]' => ['value' => self::OR_OP],
             ],
           ],
-          /*'content' => [
-            '#markup' => $this->t('is'),
-          ],*/
+                /*'content' => [
+                  '#markup' => $this->t('is'),
+                ],*/
           '#theme_wrappers' => [],
         ],
         self::VALUE_FORM_FIELD => [

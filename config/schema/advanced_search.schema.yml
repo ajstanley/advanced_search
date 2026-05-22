@@ -34,12 +34,18 @@ advanced_search.settings:
     facet_truncate:
       type: string
       label: Truncate Facet
+    recursive:
+      type: integer
+      label: Include Sub-Collections
     query_fields:
       type: sequence
       label: Query Fields
       sequence:
         type: string
         label: Field identifier
+    no_follow:
+      type: integer
+      label: Add rel="nofollow" attribute in links
 
 block.settings.search_block:
   type: block_settings
