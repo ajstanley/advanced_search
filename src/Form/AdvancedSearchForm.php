@@ -228,7 +228,7 @@ class AdvancedSearchForm extends FormBase {
           break;
 
         case "Reset":
-          $recursive = FALSE;
+          $recursive = self::getRecursive();
           $term_values = [];
           break;
 
