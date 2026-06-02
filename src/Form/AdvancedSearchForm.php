@@ -196,30 +196,41 @@ class AdvancedSearchForm extends FormBase {
    */
   protected function processInput(FormStateInterface $form_state, array $term_default_values) {
     $input = $form_state->getUserInput();
-    $input['recursive'] = $input['recursive'] ?? self::getRecursive();
+
+    $advanced_search_query = new AdvancedSearchQuery();
+    $recurse_parameter = AdvancedSearchQuery::getRecurseParameter();
+    if (array_key_exists('recursive', $input)) {
+      // AJAX/form submission: preserve the user's current checkbox value.
+      $recursive = $input['recursive'];
+    }
+    elseif ($this->request->query->has($recurse_parameter)) {
+      // Initial page load from URL: respect the query parameter.
+      $recursive = $advanced_search_query->shouldRecurse($this->request);
+    }
+    else {
+      // Initial page load with no URL value: use configured default.
+      $recursive = self::getRecursive();
+    }
 
     $term_values = isset($input['terms']) && is_array($input['terms']) ? $input['terms'] : [];
-    // Form was not submitted see if we can rebuild from query parameters.
-    $advanced_search_query = new AdvancedSearchQuery();
+
+    // Form was not submitted; see if we can rebuild from query parameters.
     if (empty($term_values)) {
       $terms = $advanced_search_query->getTerms($this->request);
       foreach ($terms as $term) {
         $term_values[] = $term->toUserInput();
       }
     }
-    if (!isset($input['recursive'])) {
-      $recursive = $advanced_search_query->shouldRecurse($this->request);
-    }
-    // Form was submitted via +/- operators.
+
     $trigger = $form_state->getTriggeringElement();
-    if ($trigger != NULL) {
+    if ($trigger !== NULL) {
       $term_index = $trigger['#term_index'] ?? 0;
-      $value = $trigger['#value'] instanceof TranslatableMarkup ?
-                $trigger['#value']->getUntranslatedString() :
-                $trigger['#value'];
+      $value = $trigger['#value'] instanceof TranslatableMarkup
+        ? $trigger['#value']->getUntranslatedString()
+        : $trigger['#value'];
+
       switch ($value) {
         case $this->getAddOperator():
-          // Insert after the term listed.
           array_splice($term_values, $term_index + 1, 0, [$term_default_values]);
           break;
 
@@ -227,19 +238,18 @@ class AdvancedSearchForm extends FormBase {
           array_splice($term_values, $term_index, 1);
           break;
 
-        case "Reset":
-          $recursive = FALSE;
+        case 'Reset':
+          $recursive = self::getRecursive();
           $term_values = [];
           break;
-
-        // Ignore unknown value for trigger.
       }
-      // Place user input with updated values.
+
       $input['terms'] = $term_values;
       $input['recursive'] = $recursive;
       $form_state->setUserInput($input);
     }
-    return [$input['recursive'] , $term_values];
+
+    return [$recursive, $term_values];
   }
 
   /**
